@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./sass/6_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.26.0/axios.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"> </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <title>動態選電影介面</title>
+</head>
+<body>
+  <div id="app">
+    <div class="apptitle">Vue.js Theater</div>
+    <div class="movie" @wheel.prevent="wheel">
+      <div class="cards" :class="{isCartOpen: isCartOpen}">
+        <div class="card" v-for="movie in movies">
+          <div class="left">
+            <div class="cover" :style="bgcss(movie.cover)"></div>
+          </div>
+          <div class="right">
+            <h2>{{ movie.name }}</h2>
+            <h4>{{ movie.type }}</h4>
+            <p v-html="movie.description"></p>
+            <div class="price">$ {{ movie.price }}</div>
+            <button class="add" @click="addCart(movie, $event)">+ Add to Cart</button>
+          </div>
+        </div>
+      </div>
+      <div class="buybox" :style="bgcss(currentMovie && currentMovie.cover)" v-if="currentMovie"></div>
+    </div>
+    <div class="fixed-control" @click="isCartOpen = !isCartOpen">
+      <i class="fa fa-cart-shopping"></i>
+      <span>{{ cart.length }}</span>
+    </div>
+    <div class="control" :class="{isCartOpen: isCartOpen}">
+      <div class="panel">
+        <h2>My Movie Cart</h2>
+        <ul>
+          <li v-for="(movie, mid) in cart">
+            <div class="thumbnail" :style="bgcss(movie.cover)"></div>
+            <h3>
+              {{ movie.name }}
+              <div class="price">$ {{ movie.price }}</div>
+              <div class="remove" @click="cart.splice(mid, 1)">-</div>
+            </h3>
+          </li>
+          <li>
+            <h3>Your cart is empty!</h3>
+          </li>
+        </ul>
+        <hr>
+        <h2>$ {{ totalPrice }}</h2>
+      </div>
+    </div>
+  </div>
+  <script>
+    var vm = new Vue({
+      el: '#app',
+      data: {
+        movies: [],
+        cart: [],
+        currentMovie: null,
+        isCartOpen: false
+      },
+      methods: {
+        bgcss(url) { //動態產生image
+          return {
+            'background-image': 'url('+url+')',
+            'background-position': 'center center',
+            'background-size': 'cover'
+          }
+        },
+        wheel(evt) {
+          TweenMax.to(".cards", 0.8, {
+            left: "+=" + evt.deltaY * 2 + "px"
+          }) // 抓取滑鼠滾輪事件deltaY上下高度
+        },
+        addCart(movie, evt) {
+          this.currentMovie = movie;  // movie裡面的物件
+          let target = evt.target;  // 點擊後事件發生
+
+          this.$nextTick(() => { // html更新完畢後，執行以下程式
+            TweenMax.from(".buybox", 0.8, {
+              left: $(evt.target).offset().left,
+              top: $(evt.target).offset().top,
+              opacity: 1,
+              ease: Power1.easeIn
+            }); //海報飛往購物車
+
+            setTimeout(() => {
+              this.cart.push(movie);
+            }, 800); //800毫秒後動態增加購物車數量
+          });
+        }
+      },
+      computed: {
+        totalPrice() {
+          return this.cart.map(movie => movie.price).reduce((total, p) => total + p, 0); 
+        }// 總價錢
+      },
+      watch: {
+        cart() {
+          TweenMax.from(".fa-cart-shopping", 0.3, {
+            scale: 0.5
+          }) // 利用TweenMa縮放效果
+        }
+      },
+      created (){
+        let apiUrl = "https://awiclass.monoame.com/api/command.php?type=get&name=movies";
+        axios.get(apiUrl).then(res => {
+          this.movies = res.data;
+        }); // 載入api
+      },
+    });
+  </script>
+</body>
+</html>
